@@ -6,6 +6,25 @@ const clearBtn = document.querySelector('#clear');
 const filter = document.querySelector('.filter');
 const swalModal = document.querySelector('.swal-modal');
 const formBtn = itemForm.querySelector('button');
+const warningNotyf = new Notyf({
+    position: {
+        x: 'left',
+        y: 'top',
+    },
+    duration: 3500,
+    types: [
+        {
+            type: 'warning',
+            background: 'orange',
+            icon: {
+                className: 'fa-solid fa-exclamation-triangle',
+                tagName: 'i',
+                text: '',
+            }
+        }
+    ]
+});
+
 let isEditMode = false;
 
 function displayItems() {
@@ -26,7 +45,7 @@ function onAddItemSubmit(e) {
         notyf.error('Please add an item', "", "error");
         return;
     }
-
+    // while () {}
     if (isEditMode) {
         const itemToEdit = itemList.querySelector('.edit-mode');
         removeItemFromStorage(itemToEdit.textContent);
@@ -40,6 +59,12 @@ function onAddItemSubmit(e) {
         updateClearButtonVisibility();
         return;
     }
+    else {
+        if (checkIfItemExist(newItem)) {
+            notyf.error('Item already exists', "", "error");
+            return;
+        }
+    }
 
     addItemToDom(newItem);
 
@@ -47,6 +72,7 @@ function onAddItemSubmit(e) {
 
     updateClearButtonVisibility();
 }
+
 
 function addItemToDom(item) {
     const li = document.createElement('li');
@@ -102,18 +128,29 @@ function removeItem(item) {
     updateClearButtonVisibility();
 }
 
-function onClickItem(e) {
-    if (e.target.parentElement.classList.contains('remove-item')) {
-        removeItem(e.target.parentElement.parentElement);
-    }
-    else {
-        setItemToEdit(e.target)
-    }
 
+function onClickItem(e) {
+    if (isEditMode === false) {
+        if (e.target.parentElement.classList.contains('remove-item')) {
+            removeItem(e.target.parentElement.parentElement);
+        } else if (e.target.tagName === 'LI') {
+            setItemToEdit(e.target);
+        }
+    }
     updateClearButtonVisibility();
 }
 
+function checkIfItemExist(item) {
+    itemLower = item.toLowerCase();
+    const itemsFromStorage = getItemsFromStorage().map(i => i.toLowerCase());
+    return itemsFromStorage.includes(itemLower);
+}
+
 function setItemToEdit(item) {
+    warningNotyf.open({
+        type: 'warning',
+        message: 'Press ESC to exit edit mode',
+    });
     isEditMode = true;
     itemList.querySelectorAll('li').forEach((i) => { i.classList.remove("edit-mode") });
     item.classList.add("edit-mode");
@@ -132,17 +169,19 @@ function removeItemFromStorage(item) {
 }
 
 function clearItems() {
-    swal({
-        text: "Are you sure you want to remove all items?",
-        buttons: { confirm: "Yes", cancel: "No" },
-    }).then((willDelete) => {
-        if (willDelete) {
-            itemList.innerHTML = '';
-            localStorage.clear();
-            notyf.success('All items removed');
-            updateClearButtonVisibility();
-        }
-    });
+    if (isEditMode === false) {
+        swal({
+            text: "Are you sure you want to remove all items?",
+            buttons: { confirm: "Yes", cancel: "No" },
+        }).then((willDelete) => {
+            if (willDelete) {
+                itemList.innerHTML = '';
+                localStorage.clear();
+                notyf.success('All items removed');
+                updateClearButtonVisibility();
+            }
+        });
+    }
 }
 
 function countItems() {
@@ -172,6 +211,19 @@ function filterItems(e) {
     })
 }
 
+function editModeDown(e) {
+    if (isEditMode === true) {
+        if (e.key === "Escape") {
+            const itemToEdit = itemList.querySelector('.edit-mode');
+            itemToEdit.classList.remove("edit-mode");
+            itemInput.value = '';
+            formBtn.style.backgroundColor = "#333";
+            formBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Add Item';
+            isEditMode = false;
+            updateClearButtonVisibility();
+        }
+    }
+}
 
 function init() {
     itemForm.addEventListener('submit', onAddItemSubmit)
@@ -180,6 +232,7 @@ function init() {
     filter.addEventListener('input', filterItems)
     document.addEventListener('DOMContentLoaded', displayItems)
     updateClearButtonVisibility();
+    document.addEventListener("keydown", editModeDown);
 }
 
 init();
