@@ -5,9 +5,20 @@ const notyf = new Notyf();
 const clearBtn = document.querySelector('#clear');
 const filter = document.querySelector('.filter');
 const swalModal = document.querySelector('.swal-modal');
+const formBtn = itemForm.querySelector('button');
+let isEditMode = false;
 
+function displayItems() {
+    let itemsFromStorage = getItemsFromStorage();
 
-function addItem(e) {
+    itemsFromStorage.forEach(item => {
+        addItemToDom(item);
+    });
+
+    updateClearButtonVisibility();
+}
+
+function onAddItemSubmit(e) {
     e.preventDefault();
     const newItem = itemInput.value;
 
@@ -15,17 +26,58 @@ function addItem(e) {
         notyf.error('Please add an item', "", "error");
         return;
     }
+
+    if (isEditMode) {
+        const itemToEdit = itemList.querySelector('.edit-mode');
+        removeItemFromStorage(itemToEdit.textContent);
+        itemToEdit.classList.remove("edit-mode");
+        itemToEdit.remove();
+        addItemToDom(newItem);
+        addItemToStorage(newItem);
+        formBtn.style.backgroundColor = "#333";
+        isEditMode = false;
+        formBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Add Item';
+        updateClearButtonVisibility();
+        return;
+    }
+
+    addItemToDom(newItem);
+
+    addItemToStorage(newItem);
+
+    updateClearButtonVisibility();
+}
+
+function addItemToDom(item) {
     const li = document.createElement('li');
-    li.appendChild(document.createTextNode(newItem));
+    li.appendChild(document.createTextNode(item));
 
     const button = createButton("remove-item btn-link text-red");
     li.appendChild(button);
 
     itemList.appendChild(li);
-
     itemInput.value = '';
+}
 
-    updateClearButtonVisibility();
+function addItemToStorage(item) {
+    let itemsFromStorage = getItemsFromStorage();
+
+    itemsFromStorage.push(item);
+
+    localStorage.setItem('items', JSON.stringify(itemsFromStorage));
+}
+
+function getItemsFromStorage() {
+    let itemsFromStorage = localStorage.getItem('items');
+
+    if (itemsFromStorage === null) {
+        itemsFromStorage = [];
+    }
+    else {
+        itemsFromStorage = JSON.parse(itemsFromStorage);
+    }
+
+    return itemsFromStorage;
 }
 
 function createButton(classes) {
@@ -42,21 +94,51 @@ function createIcon(classes) {
     return icon;
 }
 
-function removeItem(e) {
-    if (e.target.parentElement.classList.contains('remove-item')) {
-        e.target.parentElement.parentElement.remove();
-    }
+function removeItem(item) {
+    item.remove();
+
+    removeItemFromStorage(item.textContent);
+
     updateClearButtonVisibility();
 }
 
+function onClickItem(e) {
+    if (e.target.parentElement.classList.contains('remove-item')) {
+        removeItem(e.target.parentElement.parentElement);
+    }
+    else {
+        setItemToEdit(e.target)
+    }
+
+    updateClearButtonVisibility();
+}
+
+function setItemToEdit(item) {
+    isEditMode = true;
+    itemList.querySelectorAll('li').forEach((i) => { i.classList.remove("edit-mode") });
+    item.classList.add("edit-mode");
+    formBtn.innerHTML = '<i class="fa-solid fa-pen"></i> Update Item';
+    formBtn.style.backgroundColor = "#228b22"
+    itemInput.value = item.innerText;
+}
+
+function removeItemFromStorage(item) {
+    let itemsFromStorage = getItemsFromStorage();
+
+    itemsFromStorage = itemsFromStorage.filter((i) => i !== item);
+
+
+    localStorage.setItem('items', JSON.stringify(itemsFromStorage));
+}
 
 function clearItems() {
     swal({
         text: "Are you sure you want to remove all items?",
-        buttons: {confirm: "Yes", cancel: "No"},
+        buttons: { confirm: "Yes", cancel: "No" },
     }).then((willDelete) => {
         if (willDelete) {
             itemList.innerHTML = '';
+            localStorage.clear();
             notyf.success('All items removed');
             updateClearButtonVisibility();
         }
@@ -91,10 +173,13 @@ function filterItems(e) {
 }
 
 
-itemForm.addEventListener('submit', addItem)
-itemList.addEventListener('click', removeItem)
-clearBtn.addEventListener('click', clearItems)
-filter.addEventListener('input', filterItems)
+function init() {
+    itemForm.addEventListener('submit', onAddItemSubmit)
+    itemList.addEventListener('click', onClickItem)
+    clearBtn.addEventListener('click', clearItems)
+    filter.addEventListener('input', filterItems)
+    document.addEventListener('DOMContentLoaded', displayItems)
+    updateClearButtonVisibility();
+}
 
-
-
+init();

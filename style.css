@@ -16,6 +16,10 @@ body {
   background-color: #f5f5f5;
 }
 
+.edit-mode {
+  color : #ccc;
+}
+
 header {
   display: flex;
   justify-content: flex-start;
@@ -69,6 +73,8 @@ header h1 {
   border-radius: 5px;
   padding: 10px 20px;
   cursor: pointer;
+  display: flex;
+  gap: 0.7em;
 }
 
 .btn:hover {
